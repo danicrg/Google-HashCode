@@ -6,7 +6,6 @@
 import sys
 import numpy as np
 import itertools as it
-from random import randint
 import tqdm
 
 
@@ -26,12 +25,12 @@ def get_arguments(filename):
     return pizza, rows, columns, min_ingredients, max_cells
 
 
-def get_shapes():
+def get_shapes(sorting_function=lambda i: i[0] * i[1], reverse=True):
     # Returns a list of tuples of all possible shapes in this pizza
     subset = it.product(range(1, max_cells + 1), repeat=2)
     subset = [i for i in subset if i[0] * i[1] <= max_cells and i[0] * i[1] >= 2 * min_ingredients]
     subset = [i for i in subset if i[0] <= rows and i[1] <= columns]
-    subset = sorted(subset, key=lambda i: i[0] * i[1], reverse=True)
+    subset = sorted(subset, key=sorting_function, reverse=reverse)
     return subset
 
 
@@ -73,6 +72,7 @@ def main():
     slices = []
     cells = set(tuple(args) for args in np.transpose(np.nonzero(pizza_cut)).tolist())
     cells = sorted(cells, key=lambda i: i[0])
+    shapes = get_shapes()
     for cell in tqdm.tqdm(cells):
         for shape in shapes:
             if test_slice(cell + shape):
@@ -91,6 +91,5 @@ if __name__ == "__main__":
         print(str(rows) + ' rows,', str(columns) + ' columns,', str(min_ingredients) + ' minimum ingredients,', str(max_cells) + ' max cells per slice. \n')
         pizza_cut = np.zeros_like(pizza)
         pizza_cut[:, :] = 0
-        shapes = get_shapes()
         print('Pizza:\n', pizza, '\n')
         main()
