@@ -1,8 +1,5 @@
 #!/usr/local/bin/python3
 
-# New aproach:
-# set a pizza_cut mask to mark where slices have been made and introducing randomness
-
 import sys
 import numpy as np
 import itertools as it
@@ -52,7 +49,7 @@ def test_slice(slice):
     if dr * dc > max_cells or c + dc > columns or r + dr > rows:
         return False
     tomatos = np.count_nonzero(pizza[r:(r + dr), c:(c + dc)] == ['T'])
-    mushrooms = np.count_nonzero(pizza[r:(r + dr), c:(c + dc)] == ['M'])
+    mushrooms = dr * dc - tomatos
     if tomatos < min_ingredients or mushrooms < min_ingredients:
         return False
     if np.all(pizza_cut[r:(r + dr), c:(c + dc)] == '0'):
@@ -60,7 +57,7 @@ def test_slice(slice):
     return False
 
 
-def cut_pizza(slice, slices):
+def cut_slice(slice, slices):
     r, c, dr, dc = slice
     pizza_cut[r:(r + dr), c:(c + dc)] = 1
 
@@ -68,18 +65,26 @@ def cut_pizza(slice, slices):
     return slices
 
 
-def main():
+def cut_pizza(cells, shapes):
     slices = []
-    cells = set(tuple(args) for args in np.transpose(np.nonzero(pizza_cut)).tolist())
-    cells = sorted(cells, key=lambda i: i[0])
-    shapes = get_shapes()
     for cell in tqdm.tqdm(cells):
         for shape in shapes:
             if test_slice(cell + shape):
-                slices = cut_pizza(cell + shape, slices)
+                slices = cut_slice(cell + shape, slices)
     print_solution(slices)
     print('\nScore: ', get_score(slices), ' of ', rows * columns)
     print(pizza_cut)
+
+
+def main():
+    sorting_functions = [lambda i: i[1] * (i[1] + i[0]), lambda i: i[0] / i[1], lambda i: i[0] * i[1] + i[0]]
+
+    cells = set(tuple(args) for args in np.transpose(np.nonzero(pizza_cut)).tolist())
+
+    cells = sorted(cells, key=sorting_functions[0])
+    shapes = get_shapes(sorting_functions[1], True)
+
+    cut_pizza(cells, shapes)
 
 
 if __name__ == "__main__":
