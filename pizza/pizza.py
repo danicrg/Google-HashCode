@@ -4,6 +4,8 @@ import sys
 import numpy as np
 import itertools as it
 import tqdm
+import threading
+import random
 
 
 def get_arguments(filename):
@@ -44,7 +46,7 @@ def get_score(slices):
     return points
 
 
-def test_slice(slice):
+def test_slice(slice, pizza_cut):
     r, c, dr, dc = slice
     if dr * dc > max_cells or c + dc > columns or r + dr > rows:
         return False
@@ -57,44 +59,61 @@ def test_slice(slice):
     return False
 
 
-def cut_slice(slice, slices):
+def cut_slice(slice, slices, pizza_cut):
     r, c, dr, dc = slice
     pizza_cut[r:(r + dr), c:(c + dc)] = 1
 
     slices.append(slice)
-    return slices
+    return slices, pizza_cut
 
 
 def cut_pizza(cells, shapes):
+    global winner, winner_score, event
+    pizza_cut = np.zeros_like(pizza)
+    pizza_cut[:, :] = 0
     slices = []
     for cell in tqdm.tqdm(cells):
         for shape in shapes:
-            if test_slice(cell + shape):
-                slices = cut_slice(cell + shape, slices)
-    print_solution(slices)
-    print('\nScore: ', get_score(slices), ' of ', rows * columns)
-    print(pizza_cut)
+            if test_slice(cell + shape, pizza_cut):
+                slices, pizza_cut = cut_slice(cell + shape, slices, pizza_cut)
+    score = get_score(slices)
+    event.wait()
+    event.clear()
+    if score > winner_score:
+        winner = slices
+        winner_score = score
+    event.set()
 
 
 def main():
-    sorting_functions = [lambda i: i[1] * (i[1] + i[0]), lambda i: i[0] / i[1], lambda i: i[0] * i[1] + i[0]]
+    cells = set(tuple(args) for args in np.transpose(np.nonzero(pizza)).tolist())
+    cells = sorted(cells, key=lambda i: i[1] * (i[1] + i[0]))
+    shape_sorting_functions = [lambda i: i[0] * i[1] + i[0], lambda i: i[0] / i[1], lambda i: random.randint(1, 10)]
 
-    cells = set(tuple(args) for args in np.transpose(np.nonzero(pizza_cut)).tolist())
+    threads = []
 
-    cells = sorted(cells, key=sorting_functions[0])
-    shapes = get_shapes(sorting_functions[1], True)
+    for shape_function in shape_sorting_functions:
+        shapes = get_shapes(shape_function)
+        thread = threading.Thread(target=cut_pizza, args=(cells, shapes))
+        thread.start()
+        threads.append(thread)
 
-    cut_pizza(cells, shapes)
+    for thread in threads:
+        thread.join()
+
+    print('\n\nScore: ', winner_score, ' of ', rows * columns)
+    print_solution(winner)
 
 
 if __name__ == "__main__":
-
     if len(sys.argv) < 3:
         print('Usage: pizza input.in output.out')
     else:
         pizza, rows, columns, min_ingredients, max_cells = get_arguments(sys.argv[1])
         print(str(rows) + ' rows,', str(columns) + ' columns,', str(min_ingredients) + ' minimum ingredients,', str(max_cells) + ' max cells per slice. \n')
-        pizza_cut = np.zeros_like(pizza)
-        pizza_cut[:, :] = 0
         print('Pizza:\n', pizza, '\n')
+        winner = []
+        winner_score = 0
+        event = threading.Event()
+        event.set()
         main()
