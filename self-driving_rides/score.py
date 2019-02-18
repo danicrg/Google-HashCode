@@ -36,14 +36,17 @@ def get_score(input_filename, output_filename):
             ride = rides[ride_id]
             distance = ride.get_distance(vehicle_position)
             time_counter += distance
+            if time_counter > T:
+                break
             if time_counter <= ride.earliest_start:
                 score += B + ride.get_duration()
-                time_counter += ride.earliest_start + ride.get_duration()
+                time_counter = ride.earliest_start + ride.get_duration()
+                if time_counter > T:
+                    break
             else:
                 time_counter += ride.get_duration()
+                if time_counter > T:
+                    break
                 if time_counter <= ride.latest_finish:
                     score += ride.get_duration()
     return score
-
-
-get_score('input/a_example.in', 'testOutput.txt')
