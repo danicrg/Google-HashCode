@@ -73,6 +73,8 @@ def main():
                 slideshow.append(unused[best_photo])
                 unused.remove(unused[best_photo])
                 break
+            slideshow.append(unused[-1])
+            unused.remove(unused[-1])
     print(len(slideshow))
     output.write('%i\n' % len(slideshow))
     print('\n'.join([str(photo.id) for photo in slideshow]))
